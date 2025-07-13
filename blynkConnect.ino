@@ -20,7 +20,8 @@
 
 #define DHTPIN 2
 #define DHTTYPE DHT22
-#define DEBUG 1 // Set to 1 to enable debug prints, 0 to disable
+#define DEBUG 1
+bool isDeviceOn = false;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 DHT dht(DHTPIN, DHTTYPE);
@@ -39,9 +40,15 @@ BLYNK_WRITE(V0)
 {
   // Set incoming value from pin V0 to a variable
   int value = param.asInt();
-  digitalWrite(ledPin, value);
   // Update state
-  Blynk.virtualWrite(V1, value);
+  if (value == 1)
+  {
+    turnOn();
+  }
+  else
+  {
+    turnOff();
+  }
 }
 
 // This function is called every time the device is connected to the Blynk.Cloud
@@ -105,9 +112,27 @@ void turnOn()
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("May da bat!");
+  isDeviceOn = true;
+}
+void turnOff()
+{
+  digitalWrite(ledPin, LOW);
+  Blynk.virtualWrite(V1, 0);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("May da tat!");
+  isDeviceOn = false;
 }
 void sendSensor()
 {
+  if (!isDeviceOn)
+  {
+    Serial.println("May chua bat!");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("May chua bat!");
+    return;
+  }
   float humidity = getHumidity();
   float temperature = getTemperature();
   if (humidity == -1 || temperature == -1)
