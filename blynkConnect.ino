@@ -78,12 +78,6 @@ float getTemperature()
     lcd.print("Loi cam bien!");
     return -1;
   }
-  if (DEBUG)
-  {
-    Serial.print("Nhiet do: ");
-    Serial.print(temperature);
-    Serial.println(" C");
-  }
   return temperature;
 }
 float getHumidity()
@@ -96,12 +90,6 @@ float getHumidity()
     lcd.setCursor(0, 0);
     lcd.print("Loi cam bien!");
     return -1;
-  }
-  if (DEBUG)
-  {
-    Serial.print("Do am: ");
-    Serial.print(humidity);
-    Serial.println(" %");
   }
   return humidity;
 }
@@ -143,6 +131,16 @@ void sendSensor()
     lcd.print("Loi cam bien!");
     return;
   }
+  if (DEBUG)
+  {
+    Serial.print("Nhiet do: ");
+    Serial.print(temperature);
+    Serial.println(" C");
+    Serial.print("Do am: ");
+    Serial.print(humidity);
+    Serial.println(" %");
+  }
+
   Blynk.virtualWrite(V6, temperature);
   Blynk.virtualWrite(V7, humidity);
 
