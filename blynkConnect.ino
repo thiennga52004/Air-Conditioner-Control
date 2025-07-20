@@ -229,6 +229,7 @@ void setup()
 
   // Setup a function to be called every second
   timer.setInterval(1000L, myTimerEvent);
+  timer.setInterval(5000L, controlTemperature);
 }
 
 void loop()
