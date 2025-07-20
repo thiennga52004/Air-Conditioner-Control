@@ -21,7 +21,18 @@
 #define DHTPIN 2
 #define DHTTYPE DHT22
 #define DEBUG 1
+
 bool isDeviceOn = false;
+bool isFanOn = false;
+
+float temperature = 0.0;
+float humidity = 0.0;
+float tempControl = 0.0;
+
+int powerPin = 14;
+int ledFanPin = 12;
+int reactPin = 13;
+int fanPin = 15;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 DHT dht(DHTPIN, DHTTYPE);
@@ -30,8 +41,6 @@ DHT dht(DHTPIN, DHTTYPE);
 // Set password to "" for open networks.
 char ssid[] = "CIT";
 char pass[] = "";
-
-int ledPin = 14;
 
 BlynkTimer timer;
 
@@ -50,7 +59,10 @@ BLYNK_WRITE(V0)
     turnOff();
   }
 }
-
+BLYNK_WRITE(V4)
+{
+  tempControl = param.asFloat();
+}
 // This function is called every time the device is connected to the Blynk.Cloud
 BLYNK_CONNECTED()
 {
@@ -67,35 +79,29 @@ void myTimerEvent()
   // Please don't send more that 10 values per second.
   Blynk.virtualWrite(V2, millis() / 1000);
 }
-float getTemperature()
+void getTemperature()
 {
-  float temperature = dht.readTemperature();
-  if (isnan(temperature))
+  temperature = dht.readTemperature();
+  if (DEBUG)
   {
-    Serial.println("Khong doc duoc DHT!");
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Loi cam bien!");
-    return -1;
+    Serial.print("Nhiet do: ");
+    Serial.print(temperature);
+    Serial.println(" C");
   }
-  return temperature;
 }
-float getHumidity()
+void getHumidity()
 {
-  float humidity = dht.readHumidity();
-  if (isnan(humidity))
+  humidity = dht.readHumidity();
+  if (DEBUG)
   {
-    Serial.println("Khong doc duoc DHT!");
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Loi cam bien!");
-    return -1;
+    Serial.print("Do am: ");
+    Serial.print(humidity);
+    Serial.println(" %");
   }
-  return humidity;
 }
 void turnOn()
 {
-  digitalWrite(ledPin, HIGH);
+  digitalWrite(powerPin, HIGH);
   Blynk.virtualWrite(V1, 1);
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -104,62 +110,113 @@ void turnOn()
 }
 void turnOff()
 {
-  digitalWrite(ledPin, LOW);
+  digitalWrite(powerPin, LOW);
   Blynk.virtualWrite(V1, 0);
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("May da tat!");
   isDeviceOn = false;
 }
+
+void printLCD()
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Nhiet do: ");
+  lcd.print(temperature, 1);
+  lcd.print("C");
+  lcd.setCursor(0, 1);
+  lcd.print("Do am: ");
+  lcd.print(humidity, 1);
+  lcd.print("%");
+}
 void sendSensor()
 {
-  if (!isDeviceOn)
-  {
-    Serial.println("May chua bat!");
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("May chua bat!");
-    return;
-  }
-  float humidity = getHumidity();
-  float temperature = getTemperature();
+  getHumidity();
+  getTemperature();
   if (humidity == -1 || temperature == -1)
   {
-    Serial.println("Khong doc duoc DHT!");
+    if (DEBUG)
+      Serial.println("Khong doc duoc DHT!");
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Loi cam bien!");
     return;
   }
-  if (DEBUG)
-  {
-    Serial.print("Nhiet do: ");
-    Serial.print(temperature);
-    Serial.println(" C");
-    Serial.print("Do am: ");
-    Serial.print(humidity);
-    Serial.println(" %");
-  }
-
+  printLCD();
   Blynk.virtualWrite(V6, temperature);
   Blynk.virtualWrite(V7, humidity);
-
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Do am: ");
-  lcd.print(humidity, 1);
-  lcd.print("%");
-  lcd.setCursor(0, 1);
-  lcd.print("Nhiet do: ");
-  lcd.print(temperature, 1);
-  lcd.print("C");
 }
+void controlTemperature()
+{
+  if (!isDeviceOn)
+    return;
+
+  sendSensor();
+
+  if (temperature > tempControl)
+  {
+    digitalWrite(ledFanPin, HIGH); // Bật đèn báo quạt
+    digitalWrite(reactPin, LOW);   // Tắt đèn báo đạt nhiệt độ
+    if (DEBUG)
+      Serial.println("Quat dang hoat dong de lam mat phong.");
+  }
+  else
+  {
+    digitalWrite(ledFanPin, LOW); // Tắt đèn báo quạt
+    digitalWrite(reactPin, HIGH); // Bật đèn báo đạt nhiệt độ
+    if (DEBUG)
+      Serial.println("Nhiet do da dat nguong mong muon.");
+  }
+}
+
+void adjustFanSpeed()
+{
+  if (!isDeviceOn)
+  {
+    analogWrite(fanPin, 0);       // Tắt quạt nếu thiết bị tắt
+    digitalWrite(ledFanPin, LOW); // Tắt đèn báo quạt
+    return;
+  }
+
+  float diff = temperature - tempControl;
+
+  if (diff < 0)
+  {
+    analogWrite(fanPin, 0); // Quạt tắt nếu dưới ngưỡng nhiệt độ
+    digitalWrite(ledFanPin, LOW);
+    if (DEBUG)
+      Serial.println("Temp below setpoint - Fan OFF");
+  }
+  else if (diff == 0)
+  {
+    analogWrite(fanPin, 200); // Quạt quay nhẹ giữ nhiệt độ
+    digitalWrite(ledFanPin, HIGH);
+    if (DEBUG)
+      Serial.println("Temp at setpoint - Fan LOW");
+  }
+  else
+  {
+    int fanSpeed = map(diff * 10, 0, 50, 200, 1023); // PWM tăng theo độ lệch
+    fanSpeed = constrain(fanSpeed, 200, 1023);
+    analogWrite(fanPin, fanSpeed);
+    digitalWrite(ledFanPin, HIGH);
+    if (DEBUG)
+    {
+      Serial.print("Temp above setpoint - Fan Speed: ");
+      Serial.println(fanSpeed);
+    }
+  }
+}
+
 void setup()
 {
   // Debug console
   Serial.begin(9600);
   dht.begin();
-  pinMode(ledPin, OUTPUT);
+  pinMode(powerPin, OUTPUT);
+  pinMode(ledFanPin, OUTPUT);
+  pinMode(reactPin, OUTPUT);
   Wire.begin(4, 5);
   lcd.init();
   lcd.backlight();
@@ -172,7 +229,6 @@ void setup()
 
   // Setup a function to be called every second
   timer.setInterval(1000L, myTimerEvent);
-  timer.setInterval(4000L, sendSensor);
 }
 
 void loop()
