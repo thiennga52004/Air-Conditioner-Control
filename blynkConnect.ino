@@ -21,6 +21,10 @@
 #define DHTPIN 2
 #define DHTTYPE DHT22
 #define DEBUG 1
+#define powerPin 14
+#define ledFanPin 12 // Đèn dùng để thay thế quạt
+#define reactPin 13
+#define fanPin 15
 
 bool isDeviceOn = false;
 bool isFanOn = false;
@@ -29,18 +33,18 @@ float temperature = 0.0;
 float humidity = 0.0;
 float tempControl = 0.0;
 
-int powerPin = 14;
-int ledFanPin = 12; // Đèn dùng để thay thế quạt
-int reactPin = 13;
-int fanPin = 15;
+// int powerPin = 14;
+// int ledFanPin = 12;
+// int reactPin = 13;
+// int fanPin = 15;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 DHT dht(DHTPIN, DHTTYPE);
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
-char ssid[] = "CIT";
-char pass[] = "";
+char ssid[] = "NHA TRO DAY C2";
+char pass[] = "0932888619C";
 
 BlynkTimer timer;
 
@@ -105,12 +109,14 @@ void turnOn()
   Blynk.virtualWrite(V1, 1);
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("May da bat!");
+  lcd.print("May dang bat!");
   isDeviceOn = true;
 }
 void turnOff()
 {
   digitalWrite(powerPin, LOW);
+  digitalWrite(ledFanPin, LOW);
+  digitalWrite(reactPin, LOW);
   Blynk.virtualWrite(V1, 0);
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -134,7 +140,7 @@ void sendSensor()
 {
   getHumidity();
   getTemperature();
-  if (humidity == -1 || temperature == -1)
+  if (isnan(humidity) || isnan(temperature))
   {
     if (DEBUG)
       Serial.println("Khong doc duoc DHT!");
@@ -158,6 +164,7 @@ void controlTemperature()
     digitalWrite(reactPin, LOW);   // Tắt đèn báo đạt nhiệt độ
     if (DEBUG)
       Serial.println("Quat dang hoat dong de lam mat phong.");
+      Serial.println(tempControl);
   }
   else
   {
@@ -165,6 +172,8 @@ void controlTemperature()
     digitalWrite(reactPin, HIGH); // Bật đèn báo đạt nhiệt độ
     if (DEBUG)
       Serial.println("Nhiet do da dat nguong mong muon.");
+      Serial.println("Quat se quay o che do cham.");
+      Serial.println(tempControl);
   }
 }
 
