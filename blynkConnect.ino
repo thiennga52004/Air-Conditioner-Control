@@ -30,7 +30,7 @@ float humidity = 0.0;
 float tempControl = 0.0;
 
 int powerPin = 14;
-int ledFanPin = 12;
+int ledFanPin = 12; // Đèn dùng để thay thế quạt
 int reactPin = 13;
 int fanPin = 15;
 
@@ -151,9 +151,7 @@ void controlTemperature()
 {
   if (!isDeviceOn)
     return;
-
   sendSensor();
-
   if (temperature > tempControl)
   {
     digitalWrite(ledFanPin, HIGH); // Bật đèn báo quạt
@@ -174,8 +172,8 @@ void adjustFanSpeed()
 {
   if (!isDeviceOn)
   {
-    analogWrite(fanPin, 0);       // Tắt quạt nếu thiết bị tắt
-    digitalWrite(ledFanPin, LOW); // Tắt đèn báo quạt
+    analogWrite(fanPin, 0);
+    digitalWrite(ledFanPin, LOW);
     return;
   }
 
@@ -183,7 +181,7 @@ void adjustFanSpeed()
 
   if (diff < 0)
   {
-    analogWrite(fanPin, 0); // Quạt tắt nếu dưới ngưỡng nhiệt độ
+    analogWrite(fanPin, 0);
     digitalWrite(ledFanPin, LOW);
     if (DEBUG)
       Serial.println("Temp below setpoint - Fan OFF");
