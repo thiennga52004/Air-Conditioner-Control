@@ -43,8 +43,8 @@ DHT dht(DHTPIN, DHTTYPE);
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
-char ssid[] = "NHA TRO DAY C2";
-char pass[] = "0932888619C";
+char ssid[] = "CIT";
+char pass[] = "";
 
 BlynkTimer timer;
 
@@ -157,25 +157,38 @@ void controlTemperature()
 {
   if (!isDeviceOn)
     return;
+
   sendSensor();
+
+  if (isnan(temperature)) {
+    if (DEBUG)
+      Serial.println("Loi DHT!");
+    digitalWrite(ledFanPin, LOW);
+    digitalWrite(reactPin, LOW);
+    return;
+  }
+
   if (temperature > tempControl)
   {
     digitalWrite(ledFanPin, HIGH); // Bật đèn báo quạt
     digitalWrite(reactPin, LOW);   // Tắt đèn báo đạt nhiệt độ
-    if (DEBUG)
+    if (DEBUG) {
       Serial.println("Quat dang hoat dong de lam mat phong.");
       Serial.println(tempControl);
+    }
   }
   else
   {
     digitalWrite(ledFanPin, LOW); // Tắt đèn báo quạt
     digitalWrite(reactPin, HIGH); // Bật đèn báo đạt nhiệt độ
-    if (DEBUG)
+    if (DEBUG) {
       Serial.println("Nhiet do da dat nguong mong muon.");
       Serial.println("Quat se quay o che do cham.");
       Serial.println(tempControl);
+    }
   }
 }
+
 
 void adjustFanSpeed()
 {
